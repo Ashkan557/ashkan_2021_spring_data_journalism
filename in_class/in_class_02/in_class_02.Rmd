@@ -67,6 +67,7 @@ This tutorial makes use of several Tidyverse packages to load, wrangle and analy
 To use a package, and the functions and methods it enables, you first have to install it. The function to install a package is install.packages().  Though there are exceptions, you typically need to install a package once -- the first time you're using a new machine. 
 
 ```{r}
+# install.packages('knitr')
 install.packages('tidyverse')
 ```
 
@@ -94,7 +95,8 @@ For each pharmacy in Mingo County, West Virginia, it lists the total number of p
 
 ```{r}
 
-arcos_wv_mingo <- read_csv("data/arcos-wv-mingo-54059-pharmacy.csv")
+arcos_wv_mingo <- 
+read_csv("data/arcos-wv-mingo-54059-pharmacy.csv")
 
 ```
 
