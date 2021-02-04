@@ -408,7 +408,7 @@ Answer the question below by writing code in the empty codeblock.  Edit the comm
 **Task (Write Code and Run It)**: 1. In Baltimore City, which pharmacy got the most shipments between 2006 and 2014? How many shipments did it get?  Hint: the total_records column reflects the number of shipments
 
 ```{r}
-# Answer to question 1: # Giant Pharmacy 166
+# Answer to question 1: # Giant Pharmacy 166, 10,365
 arcos_md_baltimorecity_sorted<-
 arcos_md_baltimorecity_trimmed %>%
 arrange(desc(total_records))  
@@ -417,7 +417,7 @@ arrange(desc(total_records))
 **Task (Write Code and Run It)**: 2. In Baltimore City, which pharmacy got the smallest number of pills between 2006 and 2014? How many pills did it get?  Hint: the total_dosage_unit column reflects the number of pills.
 
 ```{r}
-# Answer to question 2: OSHINSKY, ALAN E MD and JAKOBOVITS, JULIAN MD 
+# Answer to question 2: OSHINSKY, ALAN E MD and JAKOBOVITS, JULIAN MD both have 4. In terms of an actual pharmacy NIA Research Pharmacy had the least with 100.
 arcos_md_baltimorecity_sorted<-
 arcos_md_baltimorecity_trimmed %>%
 arrange(desc(total_dosage_unit))
