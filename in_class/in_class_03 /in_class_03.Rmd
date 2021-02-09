@@ -126,8 +126,9 @@ We can filter the state column to only return Maryland data.
 ```{r}
 # Select only three columns, then sort from highest to lowest on August case rate
 covid_maryland_august_case_rate <- covid_county_august_case_rate %>%
-  filter(state == "Maryland")
+  filter(state != "Maryland")
 
+covid_maryland_august_case_rate
 ```
 
 **Task (Write Code)**: In the codeblock below, create a new object called covid_virginia_august_case rate.  It should filter covid_county_august_case_rate to only examine Virginia counties, similar to what we did above with Virginia.   
@@ -192,6 +193,18 @@ Then, create an object called covid_florida_jun_aug_pct_change that uses the nec
 
 After you get the answer, in a comment inside the codeblock, write a sentence that describes your findings as simply as you can, as you might put it in a news story.    
 
+
+
 -30-
 
 
+```{r}
+# Out of all Florida counties, Liberty experienced the smallest percent change in COVID-19 cases from June to August, with cases increasing by about 95%.
+
+covid_Florida_jun_aug_pct_change <- covid_county_monthly_case_rate %>%
+  select(county, state, d_2020_06_30, d_2020_08_30) %>%
+  filter(state == "Florida") %>%
+  mutate(jun_aug_pct_change = (d_2020_08_30 - d_2020_06_30)/d_2020_06_30*100) %>%
+  arrange(jun_aug_pct_change)
+
+```
