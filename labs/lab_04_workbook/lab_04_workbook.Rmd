@@ -505,6 +505,7 @@ counties_per_state
 counties_per_state <- covid_county %>%
   group_by(state) %>%
   summarise(total_counties = n()) %>%
+  filter(state =="Virginia")  %>%
   arrange(total_counties)
 
 
