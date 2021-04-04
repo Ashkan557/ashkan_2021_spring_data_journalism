@@ -1,7 +1,7 @@
 ---
 title: "Data Analysis 01 Template"
-author: "Ashkan Motamedi (Group 2)"
-date: "3/14/2021"
+author: "Julia Arbutus, Josh Davidsburg, Brittany Gady, Ashkan Motamedi (Group 2)"
+date: "4/4/2021"
 output:
   html_document:
     theme: cerulean
@@ -63,112 +63,166 @@ In this notebook, we are reverse engineering five sentences from the story.
 
 * **Sentence text**: [As Baltimore has seen a stunning surge of violence, with nearly a killing each day for the past three years in a city of 600,000, homicide arrests have plummeted. City police made an arrest in 41 percent of homicides in 2014; last year (2018), the rate was just 27 percent, a 14 percentage point drop.]
 
-* **Analysis summary**: We confirmed the posts findings. we brought in the data, filtered out Baltimore and both 2014 and 107, then we found the arrest rates for both years.]
+* **Analysis summary**: We confirmed The Post's findings. We brought in the data, filtered for Baltimore and sorted the table so the column names would be the end result of the homicide case (closed by arrest, etc.). Then, we calculated the arrest rate for both 2014 and 2017 to get 41% and 27%. 
+
+
 
 ```{r}
 # Put code to reverse engineer sentence here
-homicide_by_date <- homicide_data %>%
+#Check to see how many days in the last three years have had homicides.
+arrest_rate <- homicide_data %>%
+  mutate(reported_date = ymd(reported_date)) %>%
   filter(city == "Baltimore") %>%
-  filter(reported_date >= 20150101) %>%
-  group_by(reported_date) %>%
-  summarise(homicides_per_day = n())
-  
-#find the arrest rate in 2014  
-baltimore_homicide_2014 <- homicide_data %>%
-  filter(city == "Baltimore") %>% 
-  mutate(reported_date = ymd(reported_date)) %>%
-  filter(reported_date >= as.Date("2014-01-01") & reported_date <= as.Date("2014-12-31"))%>%
-  group_by(disposition) %>%
-  summarise(total =n())
-arrest_rate_2014 <- baltimore_homicide_2014$total[1] / sum(baltimore_homicide_2014$total)*100
-  
-arrest_rate_2014
-#find the arrest rate in 2017  
-baltimore_homicide_2017 <- homicide_data %>%
-  filter(city == "Baltimore") %>% 
-  mutate(reported_date = ymd(reported_date)) %>%
-  filter(reported_date >= as.Date("2017-01-01") & reported_date <= as.Date("2017-12-31"))%>%
-  group_by(disposition) %>%
-  summarise(total =n())
-arrest_rate_2017 <- baltimore_homicide_2017$total[1] / sum(baltimore_homicide_2017$total)*100
-  
-arrest_rate_2017
+  mutate(year = year(reported_date)) %>%
+  group_by(year, disposition) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>% 
+  mutate(total_homicides=closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = (closed_by_arrest/total_homicides)*100) %>%
+  filter(year %in% c("2014", "2017"))
+arrest_rate
 
-# Display results of code below this codeblock
+
 
 ```
 
 ### Sentence 2
 
 * **Sentence text**: Of 50 of the nation’s largest cities, Baltimore is one of 34 where police now make homicide arrests less often than in 2014, according to a Washington Post analysis. In Chicago, the homicide arrest rate has dropped 21 percentage points, in Boston it has dropped 12 points and in St. Louis it is down 9.
-* **Analysis summary**: We were able to confirm the findings of this sentence: Chicago's homicide arrest rate dropped 21 percentage points between 2014 and 2017, Boston dropped 12 points and St. Louis dropped 9. Baltimore is one of 34 cities with homicide arrest rate changes below zero, indicating less arrests in 2017 than 2014.]
+* **Analysis summary**:We were able to confirm parts of The Post's findings. We found that Chicago's homicide arrest rate dropped 21 percentage points between 2014 and 2017, Boston's dropped 12 points and St. Louis's dropped 9. But, instead of finding that Baltimore is one of 34 cities with homicide arrest rate changes below zero, we found that Baltimore is one of 35 cities with homicide arrest rate changes below zero. (Below zero indicating police make arrests less often than in 2014). The 35th city is Tampa, Florida.
+
+```{r}
+# calculate number of arrests
+arrest_rate <- homicide_data %>%
+  mutate(reported_date = ymd(reported_date)) %>%
+  mutate(year = year(reported_date)) %>%
+  group_by(city, year, disposition) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>% 
+  mutate(closed_by_arrest = replace_na(closed_by_arrest,0),
+         closed_without_arrest = replace_na(closed_without_arrest,0),
+         open_no_arrest = replace_na(open_no_arrest,0)
+         ) %>%
+  mutate(total_homicides=closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = (closed_by_arrest/total_homicides)*100) %>%
+  select(city, year, arrest_rate) %>%
+  filter(year %in% c("2014", "2017")) %>%
+  pivot_wider(names_from=year,values_from=arrest_rate) %>%
+  clean_names() %>%
+  mutate(change_2014_2017 = x2017-x2014) %>%
+  arrange(change_2014_2017)
+arrest_rate
+```
+
+### Sentence 3
+
+* **Sentence text**: Baltimore is also one of 30 cities that have seen an increase in homicides in recent years, with the greatest raw number increase in killings of any city other than Chicago, which has four times the population. While homicide rates remain near historical lows in most American cities, Baltimore and Chicago are now both seeing murder tallies that rival the early 2000s.
+* **Analysis summary**: We were able to confirm part of The Post's findings. We found that 2014 was the year Baltimore led the nation in the greatest raw number increase in killings with Chicago, but we were not able to confirm the number of 30 cities that had seen an increase in homicides. We found 25 states that saw an increase from 2014 to 2017, which was the closest number to the 30 cities reported in the article.
+
+```{r}
+arrest_rate <- homicide_data %>%
+  mutate(reported_date = ymd(reported_date)) %>%
+  mutate(year = year(reported_date)) %>%
+  group_by(city, year) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=year, values_from=total) %>%
+  clean_names() %>% 
+  mutate_if(is.numeric, replace_na, 0) %>%
+  mutate(change_2014_2017 = x2017-x2014) %>%
+  arrange(change_2014_2017)
+arrest_rate
+```
+
+### Sentence 4
+
+* **Sentence text**: While there is evidence for and against a nationwide Ferguson effect — the theory that crime increased after 2014 as police faced more scrutiny following the shooting of Michael Brown in Ferguson, Mo. — in Baltimore there is an indisputable Freddie Gray effect. As violence in the city has risen since 2015, the likelihood of a killer being arrested has dropped precipitously.
+* **Analysis summary**: We confirmed The Post's findings. We found that from 2015, total homicides in Baltimore have increased, while the arrest rate has decreased. 
+
+```{r}
+arrest_rate_drop <- homicide_data %>%
+  filter(city == "Baltimore") %>%
+  mutate(reported_date = ymd(reported_date)) %>%
+  mutate(year = year(reported_date)) %>%
+  group_by(year, disposition) %>%
+  summarize(total = n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>% 
+  mutate(total_homicides = closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = (closed_by_arrest/total_homicides)*100) %>%
+  select(year, total_homicides, arrest_rate)
+  
+ggplot(arrest_rate_drop, aes(x = year, y = total_homicides)) + geom_line() + scale_x_continuous(breaks = pretty_breaks())
+ggplot(arrest_rate_drop, aes(x = year, y = arrest_rate)) + geom_line() + scale_x_continuous(breaks = pretty_breaks())
+arrest_rate_drop
+```
+
+### Sentence 5
+
+* **Sentence text**: Community leaders and residents say that leaves hundreds of families who have been robbed of a loved one without a chance at seeing justice done. Of the 1,002 homicides between 2015 and the beginning of this year, just 252 — one out of every four — resulted in an arrest.
+* **Analysis summary**: We confirmed The Post's findings. We found that there were 1,002 homicides between 2015 and the beginning of 2017, and that only 252, or one out of four, were closed by arrest.
+
+```{r}
+Homicides_number <- homicide_data %>%
+  select(reported_date,city,disposition)%>%
+  filter(city =="Baltimore", reported_date >= 20150101)%>%
+  group_by(disposition) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>%
+  mutate(total_homicides=closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = total_homicides/closed_by_arrest)
+Homicides_number
+```
+
+-30-
+
 ```{r}
 # Put code to reverse engineer sentence here
-# calculate number of arrests in 2014
-total_homicide_2014 <- homicide_data %>%
-  select(reported_date, city, state, disposition) %>%
-  filter(reported_date %in% 20140101:20141231) %>%
-  group_by(city) %>%
-  summarise(total_cases_2014=n())
-total_homicide_2017 <- homicide_data %>%
-  select(reported_date, city, state, disposition) %>%
-  filter(reported_date %in% 20170101:20171231) %>%
-  group_by(city) %>%
-  summarise(total_cases_2017=n())
-homicide_arrest_2014 <- homicide_data %>%
-  select(reported_date, city, state, disposition) %>%
-  filter(reported_date %in% 20140101:20141231) %>%
-  group_by(city) %>%
-  count(arrests = disposition == "Closed by arrest") %>%
-  filter(arrests == TRUE)
-homicide_arrest_2017 <- homicide_data %>%
-  select(reported_date, city, state, disposition) %>%
-  filter(reported_date %in% 20170101:20171231) %>%
-  group_by(city) %>%
-  count(arrests = disposition == "Closed by arrest") %>%
-  filter(arrests == TRUE)
-# join data sets
-homicide_arrest_rate_2014 <- homicide_arrest_2014 %>%
-  inner_join(total_homicide_2014) %>%
-  mutate(arrest_rate_2014 = (n/total_cases_2014*100)) %>%
-  select(city, arrest_rate_2014)
-homicide_arrest_rate_2017 <- homicide_arrest_2017 %>%
-  inner_join(total_homicide_2017) %>%
-  mutate(arrest_rate_2017 = (n/total_cases_2017*100)) %>%
-  select(city, arrest_rate_2017)
-homicide_arrest_change_2014_2017 <- homicide_arrest_rate_2017 %>%
-  full_join(homicide_arrest_rate_2014) %>%
-  mutate(arrest_rate_change=arrest_rate_2017-arrest_rate_2014) %>%
-  arrange(arrest_rate_change)
-# display change in arrest from 2014 to 2017
-homicide_arrest_change_2014_2017
-# Display results of code below this codeblock
+# calculate number of arrests
+arrest_rate <- homicide_data %>%
+  mutate(reported_date = ymd(reported_date)) %>%
+  mutate(year = year(reported_date)) %>%
+  group_by(city, year, disposition) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>% 
+  mutate(closed_by_arrest = replace_na(closed_by_arrest,0),
+         closed_without_arrest = replace_na(closed_without_arrest,0),
+         open_no_arrest = replace_na(open_no_arrest,0)
+         ) %>%
+  mutate(total_homicides=closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = (closed_by_arrest/total_homicides)*100) %>%
+  select(city, year, arrest_rate) %>%
+  filter(year %in% c("2014", "2017")) %>%
+  pivot_wider(names_from=year,values_from=arrest_rate) %>%
+  clean_names() %>%
+  mutate(change_2014_2017 = x2017-x2014) %>%
+  arrange(change_2014_2017)
+arrest_rate
 
 ```
 
 ### Sentence 3
 
 * **Sentence text**: [Baltimore is also one of 30 cities that have seen an increase in homicides in recent years, with the greatest raw number increase in killings of any city other than Chicago, which has four times the population. While homicide rates remain near historical lows in most American cities, Baltimore and Chicago are now both seeing murder tallies that rival the early 2000s.]
-* **Analysis summary**: In running the data we found that 2014 was the year Baltimore lead Chicago 236 to 129. However, we were unable to confirm the findings of this data as only 25 states saw an increase in homicides in 2014. No year ran meant the required 30 as mentioned in the story 2014 was the closest with 25 when subtracted by 2017 
+* **Analysis summary**:  We were able to confirm part of The Post's findings. We found that 2014 was the year Baltimore led the nation in the greatest raw number increase in killings with Chicago, but we were not able to confirm the number of 30 cities that had seen an increase in homicides. We found 25 states that saw an increase from 2014 to 2017, which was the closest number to the 30 cities reported in the article.
+
 
 ```{r}
 # Put code to reverse engineer sentence here
-
-total_homicide_2014 <- homicide_data %>%
-  select(reported_date, city, state, disposition) %>%
-  filter(reported_date %in% 20140101:20141231) %>%
-  group_by(city) %>%
-  summarise(total_cases_2014=n())
-total_homicide_2017 <- homicide_data %>%
-  select(reported_date, city, state, disposition) %>%
-  filter(reported_date %in% 20170101:20171231) %>%
-  group_by(city) %>%
-  summarise(total_cases_2017=n())
-total_homicide_arrest_<- total_homicide_2014 %>%
-  inner_join(total_homicide_2017) %>%
-  mutate(increase_in_homicides_2014  =  total_cases_2017 - total_cases_2014) %>%
-  select(city,increase_in_homicides_2014) %>%
-  arrange(desc(increase_in_homicides_2014))
+arrest_rate <- homicide_data %>%
+  mutate(reported_date = ymd(reported_date)) %>%
+  mutate(year = year(reported_date)) %>%
+  group_by(city, year) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=year, values_from=total) %>%
+  clean_names() %>% 
+  mutate_if(is.numeric, replace_na, 0) %>%
+  mutate(change_2014_2017 = x2017-x2014) %>%
+  arrange(change_2014_2017)
+arrest_rate
 
 
   
@@ -181,11 +235,26 @@ total_homicide_arrest_<- total_homicide_2014 %>%
 
 ### Sentence 4
 
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
+* **Sentence text**: [While there is evidence for and against a nationwide Ferguson effect — the theory that crime increased after 2014 as police faced more scrutiny following the shooting of Michael Brown in Ferguson, Mo. — in Baltimore there is an indisputable Freddie Gray effect. As violence in the city has risen since 2015, the likelihood of a killer being arrested has dropped precipitously.]
+* **Analysis summary**: [We confirmed The Post's findings. We found that from 2015, total homicides in Baltimore have increased, while the arrest rate has decreased. ]
 
 ```{r}
 # Put code to reverse engineer sentence here
+arrest_rate_drop <- homicide_data %>%
+  filter(city == "Baltimore") %>%
+  mutate(reported_date = ymd(reported_date)) %>%
+  mutate(year = year(reported_date)) %>%
+  group_by(year, disposition) %>%
+  summarize(total = n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>% 
+  mutate(total_homicides = closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = (closed_by_arrest/total_homicides)*100) %>%
+  select(year, total_homicides, arrest_rate)
+  
+ggplot(arrest_rate_drop, aes(x = year, y = total_homicides)) + geom_line() + scale_x_continuous(breaks = pretty_breaks())
+ggplot(arrest_rate_drop, aes(x = year, y = arrest_rate)) + geom_line() + scale_x_continuous(breaks = pretty_breaks())
+arrest_rate_drop
 
 # Display results of code below this codeblock
 
@@ -194,25 +263,20 @@ total_homicide_arrest_<- total_homicide_2014 %>%
 ### Sentence 5
 
 * **Sentence text**: Community leaders and residents say that leaves hundreds of families who have been robbed of a loved one without a chance at seeing justice done. Of the 1,002 homicides between 2015 and the beginning of this year, just 252 — one out of every four — resulted in an arrest.
-* **Analysis summary**: [we were able to confirm The Post's findings. There were 1,005 homicides in Baltimore between the beginning of 2015 and 2016. Only 252 of those homicides were "closed by arrest." So between the beginning of 2015 and 2016, one out of every four Baltimore homicides resulted in an arrest.]
+* **Analysis summary**: [We confirmed The Post's findings. We found that there were 1,002 homicides between 2015 and the beginning of 2017, and that only 252, or one out of four, were closed by arrest.
+]
 
 ```{r}
-# Put code to reverse engineer sentence here
 Homicides_number <- homicide_data %>%
   select(reported_date,city,disposition)%>%
   filter(city =="Baltimore", reported_date >= 20150101)%>%
-  summarise(number_of_homicides=n())
-  
-Homicides_arrests <- homicide_data %>%
-  select(reported_date,city,disposition)%>%
-  filter(city =="Baltimore", reported_date >= 20150101, disposition=="Closed by arrest")%>%
-  summarise(number_of_homicides_arrests=n())
-one_out_of_four<- (Homicides_number/Homicides_arrests)
-# Display results of code below this codeblock
+  group_by(disposition) %>%
+  summarise(total=n()) %>%
+  pivot_wider(names_from=disposition, values_from=total) %>%
+  clean_names() %>%
+  mutate(total_homicides=closed_by_arrest+closed_without_arrest+open_no_arrest) %>%
+  mutate(arrest_rate = total_homicides/closed_by_arrest)
 Homicides_number
-Homicides_arrests
-one_out_of_four
-
 
 
 ```
