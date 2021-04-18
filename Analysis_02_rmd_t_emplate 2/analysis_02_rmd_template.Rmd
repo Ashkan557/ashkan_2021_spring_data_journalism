@@ -1,7 +1,7 @@
 ---
-title: "Data Analysis 01 Template"
-author: "Student names here"
-date: "3/2/2021"
+title: "Data Analysis 02 Template"
+author: "Ashkan Motamedi,Joshua Davidsburg, Brittany Gaddy, Julia Arbutus"
+date: "4/18/2021"
 output:
   html_document:
     theme: cerulean
@@ -34,14 +34,6 @@ library(censusxy)
 census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
 ```
 
-```{r echo=FALSE, message=FALSE}
-
-```
-
-## Load and Cleaning Data
-
-[In this block of text, describe the source of the data, and write a basic data dictionary for data you are working with]
-
 ```{r}
 # Load required data
 # Path to data should be loaded from folder "data" i.e. tabula_SalesAndRedeemsByMonth <- read_csv("data/tabula_SalesAndRedeemsByMonth.csv")
@@ -60,37 +52,6 @@ clean_names()
    count()
 ```
 
-## Sentences to Engineer
-In this notebook, we are reverse engineering five sentences from the story.
-
-### Sentence 1
-
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
-```{r}
-# Put code to reverse engineer sentence here
-
-# Display results of code below this codeblock
-
-```
-
-### Sentence 2
-
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
-```{r}
-# Put code to reverse engineer sentence here
-
-# Display results of code below this codeblock
-
-```
-
-### Sentence 3
-
-* **Sentence text**: [Have any of the sales trends we've identified changed over the last few years, especially when comparing trends before and during the pandemic? ]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
 
 ```{r}
 Clean_tabula_SalesAndRedeemsByMonth <-  read_csv("tabula-SalesAndRedeemsByMonth.csv") %>%
@@ -98,7 +59,7 @@ clean_names()
   Clean_tabula_SalesAndRedeemsByMonth
   
   
- x <- Clean_tabula_SalesAndRedeemsByMonth %>%
+ number_of_stores_per_zip <- Clean_tabula_SalesAndRedeemsByMonth %>%
    group_by(zip_code)%>%
    count()
  ## Get list of states (Exclude non-states, except DC)
@@ -109,8 +70,10 @@ states <- fips_codes %>%
   head(51) %>%
   as_vector() 
 
+
+#get Zip census information
 zcta_stats <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), year = 2018) %>%
-  select(GEOID,NAME, variable, estimate) %>%
+  select(GEOID, NAME, variable, estimate) %>%
   pivot_wider(names_from=variable, values_from=estimate) %>%
   rename(
     total_pop = B01001_001,
@@ -131,60 +94,17 @@ zcta_stats <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_00
   clean_names() %>%
   mutate(fips_code_state = str_sub(geoid,start=1L,end=2L),
          geoid=str_sub(geoid, start=3L,end=7L)) %>%
-  select(fips_code_state,geoid,-ends_with("pop"), starts_with("pct"),median_income) 
- census_tract_stats <- get_acs(geography = "tract", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), state=states,year = 2018) %>%
-  select(GEOID, variable, estimate) %>%
-  pivot_wider(names_from=variable, values_from=estimate) %>%
-  rename(
-    total_pop = B01001_001,
-    white_pop = B02001_002,
-    black_pop = B02001_003,
-    native_pop = B02001_004,
-    hispanic_pop = B03001_003,
-    poverty_pop = B06012_002,
-    median_income = B19013_001
-  ) %>%
-  mutate(pct_white = round(white_pop/total_pop,2)*100,
-         pct_nonwhite = 100-round(white_pop/total_pop,2)*100,
-         pct_black = round(black_pop/total_pop,2)*100,
-         pct_native = round(native_pop/total_pop,2)*100,
-         pct_hispanic = round(hispanic_pop/total_pop,2)*100,
-         pct_poverty = round(poverty_pop/total_pop,2)*100
-         ) %>%
-  clean_names() %>%
-  select(geoid,-ends_with("pop"), starts_with("pct"),median_income) 
-#left_join(census_tract_stats, by = "x") 
-# Produce geocoded dataframe
-geocoded_Kentucky <- cxy_geocode(x , street = 'address', city = 'city', state = 'state', zip = 'zip code',return='geographies',benchmark='Public_AR_Current',vintage='Current_Current',output='full') %>%
-  mutate(geoid=paste0(cxy_state_id,cxy_county_id,cxy_tract_id)) %>%
-  select(geoid, everything())
-	
-geocoded_sample
-# Display results of code below this codeblock
+  select(fips_code_state, name, geoid,-ends_with("pop"), starts_with("pct"),median_income) %>%
+  mutate(name = as.numeric(substr(name, 7,11))) 
+
+#join number of stores per zip with census data
+
+number_of_stores_joined_with_census <- number_of_stores_per_zip %>%
+  left_join(zcta_stats, by = c("zip_code" = "name"))
+
+number_of_stores_joined_with_census
 
 ```
-
-### Sentence 4
-
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
-```{r}
-# Put code to reverse engineer sentence here
-
-# Display results of code below this codeblock
-
-```
-
-### Sentence 5
-
-* **Sentence text**: [Paste in sentence to engineer here]
-* **Analysis summary**: [Write up two to three sentences describing the results of your analysis.  Were you able to confirm the finding? If not, why not?]
-
-```{r}
-# Put code to reverse engineer sentence here
-
-# Display results of code below this codeblock
 
 ```
 
