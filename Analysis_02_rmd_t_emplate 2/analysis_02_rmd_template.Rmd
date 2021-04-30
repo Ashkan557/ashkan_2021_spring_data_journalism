@@ -50,6 +50,11 @@ clean_names()
  x <- Clean_tabula_SalesAndRedeemsByMonth %>%
    group_by(zip_code)%>%
    count()
+   Clean_tabula_SalesAndRedeemsByMonth
+ number_of_stores_per_zip_ky <- Clean_tabula_SalesAndRedeemsByMonth %>%
+   group_by(zip_code)%>%
+   count()
+  
 ```
 
 
@@ -72,7 +77,7 @@ states <- fips_codes %>%
 
 
 #get Zip census information
-zcta_stats <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), year = 2018) %>%
+zcta_stats_ky <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_002","B02001_003","B02001_004","B03001_003","B06012_002","B19013_001"), year = 2018) %>%
   select(GEOID, NAME, variable, estimate) %>%
   pivot_wider(names_from=variable, values_from=estimate) %>%
   rename(
@@ -97,15 +102,90 @@ zcta_stats <- get_acs(geography = "zcta", variables = c( "B01001_001","B02001_00
   select(fips_code_state, name, geoid,-ends_with("pop"), starts_with("pct"),median_income) %>%
   mutate(name = as.numeric(substr(name, 7,11))) 
 
+
+
+
+
+```
+
+```{r}
+zcta_stats_quint_ky <- zcta_stats_ky %>%
+  filter(str_detect(fips_code_state,"^21")) %>%
+  ungroup() %>%
+  filter(! is.na(median_income)) %>%
+  mutate(quintile = ntile(median_income, 5))
 #join number of stores per zip with census data
+number_of_stores_joined_with_census_ky <- number_of_stores_per_zip_ky %>%
+  left_join(zcta_stats_quint_ky, by = c("zip_code" = "name")) %>%
+   drop_na()
+#count the number of stores in each quintile
+income_brackets_stores_ky <- number_of_stores_joined_with_census_ky %>%
+  group_by(quintile) %>%
+  summarise(total_stores = n(), max_median_income = max(median_income))
+ #filter by 50% or more non-white population OR median income less than New Mexico's quintile 1 upper threshold
+retail_outlet_threshold_ky <- number_of_stores_joined_with_census_ky %>%
+  filter(pct_nonwhite > 50 | quintile == 1) %>%
+  #to find out how many locations have a predominantly non-white population, a median income less than New Mexico's quintile 1 threshold, or both
+  count(pct_nonwhite > 50, quintile == 1)
+retail_outlet_threshold_ky
+ggplot(income_brackets_stores_ky, aes(x = quintile, y = total_stores)) + geom_col()
+```
+```{r}
+#trying to turn year_month from a character to a double
+#date <- Clean_tabula_SalesAndRedeemsByMonth %>%
+  #select(year_month) %>%
+  #mutate(new = str_replace_all(year_month, "-", "")) %>%
+  #select(new) %>%
+  #unlist(new) %>%
+  #as.numeric() %>%
+  
+all_years_with_quint_ky <- Clean_tabula_SalesAndRedeemsByMonth %>%
+  left_join(number_of_stores_joined_with_census_ky, by = "zip_code") %>%
+  filter(net_sales > 0) %>%
+  group_by(quintile, year_month) %>%
+  summarise(sales = sum(net_sales)) %>%
+  filter(!is.na(quintile)) %>%
+  arrange(year_month) %>%
+  mutate(percent_change_over_time = (sales-lag(sales))/ lag(sales) *100) %>%
+  mutate(quintile = as.character(quintile))
+all_years_with_quint_ky_2018 <- all_years_with_quint_ky %>%
+  filter(year_month <= ("2018-12"))
+all_years_with_quint_ky_2019 <- all_years_with_quint_ky %>%
+  filter(year_month >= ("2019-01")) %>%
+  filter(year_month <= ("2019-12"))
+all_years_with_quint_ky_2020 <- all_years_with_quint_ky %>%
+    filter(year_month >= ("2020-01")) %>%
+  filter(year_month <= ("2020-12"))
+  
+all_years_with_quint_ky_2021 <- all_years_with_quint_ky %>%
+    filter(year_month >= ("2021-01")) 
+  
+total_quintile_sales_ky <- Clean_tabula_SalesAndRedeemsByMonth %>%
+  left_join(number_of_stores_joined_with_census_ky, by = "zip_code") %>%
+  select(zip_code, year_month, net_sales, pct_nonwhite, median_income, quintile) %>%
+  group_by(quintile) %>%
+  summarise(sales = sum(net_sales)) %>%
+  drop_na()
+all_years_with_quint_ky
+  
+ggplot(all_years_with_quint_ky) + geom_line(aes(x = year_month, y =sales, color = quintile, group = quintile))
+ggplot(all_years_with_quint_ky_2018) + geom_line(aes(x = year_month, y =sales, color = quintile, group = quintile))
+ggplot(all_years_with_quint_ky_2019) + geom_line(aes(x = year_month, y =sales, color = quintile, group = quintile))
+ggplot(all_years_with_quint_ky_2020) + geom_line(aes(x = year_month, y =sales, color = quintile, group = quintile))
+ggplot(all_years_with_quint_ky_2021) + geom_line(aes(x = year_month, y =sales, color = quintile, group = quintile))
+```
 
-number_of_stores_joined_with_census <- number_of_stores_per_zip %>%
-  left_join(zcta_stats, by = c("zip_code" = "name"))
 
-number_of_stores_joined_with_census
+
+```{r}
+total_quintile_sales_ky <- Clean_tabula_SalesAndRedeemsByMonth %>%
+ left_join(retail_outlet_threshold_ky, by = c("zip_code" = "name")) %>%
+ select(zip_code, year_month, pct_nonwhite, median_income, quintile, net_sales) %>%
+  group_by(quintile) %>%
+   summarise(sales = sum(net_sales)) %>%
+drop_na() 
 
 ```
 
 ```
-
 -30-
